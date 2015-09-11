@@ -3,21 +3,40 @@ var gutil = require('gulp-util')
 var through = require('through2')
 var mustache = require('mustache')
 
-function reveal (content, option, callback) {
-  var view = {}
+function reveal (content, options, callback) {
+  var view = options
   var slides = ''
-  content.split('\n<hr>\n').forEach(function (slide, i) {
+  content.split(/\<h2/gi).forEach(function (slide, i) {
     var state = ''
     if (slide.match(/<h2.*\?<\/h2>/)) {
-      state = ' data-state=q'
+      // state = ' data-state="q"'
     } else if (slide.indexOf('<h2') !== -1) {
-      state = ' data-state=title'
+      // state = ' data-state="title"'
     }
-    if (i === 0) {
-      view.title = slide.replace(/\<h2.*\>(.*)\<(.|\n)*/g, '$1')
-      state = ' data-state=front'
+
+    if (i === 0 && !view.title) {
+      view.title = slide.replace(/\<h1.*\>(.*)\<(.|\n)*/g, '$1')
     }
-    slides = slides.concat('\n<section' + state + '>\n' + slide + '\n</section>\n')
+
+    if (slide.indexOf('<') > 0) {
+      slide = '\n<h2' + slide
+    }
+
+    var subslides = ''
+    if (slide.indexOf('<h3') !== -1) {
+      slide.split('<h3').forEach(function (subslide, i) {
+        if (subslide.indexOf('\n<') > 0) {
+          subslide = '\n<h3' + subslide
+        }
+        subslides = subslides.concat('\n<section>\n' + subslide + '\n</section>\n')
+      })
+    }
+
+    if (subslides.length > 1) {
+      slides = slides.concat('\n<section>\n' + subslides + '\n</section>\n')
+    } else {
+      slides = slides.concat('\n<section>\n' + slide + '\n</section>\n')
+    }
   })
   view.slides = slides
   var template = fs.readFileSync(__dirname + '/template.mustache', 'utf8')
